@@ -1,5 +1,5 @@
 {
-  "name": "@repo/client",
+  "name": "client",
   "description": "Nextjs client for repo",
   "version": "0.0.0",
   "private": true,

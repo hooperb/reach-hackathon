@@ -16,8 +16,8 @@ RUN yarn install
 COPY out/full .
 
 # build the app
-RUN npx turbo run build --scope=@repo/server --include-dependencies --no-deps
+RUN npx turbo run build --scope=server --include-dependencies --no-deps
 
-CMD PORT=8000 npx turbo run start --scope=@repo/server
+CMD PORT=3000 npx turbo run start --scope=server
 
-EXPOSE 8000
+EXPOSE 3000
