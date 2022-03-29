@@ -1,35 +1,27 @@
 {
-  "name": "@repo/client",
-  "description": "Nextjs client for repo",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@repo/database",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "next": "12.0.8",
-    "react": "17.0.2",
-    "react-dom": "17.0.2",
-    "ui": "*",
-    "next-transpile-modules": "9.0.0"
+    "@typegoose/typegoose": "^9.7.1",
+    "mongoose": "^6.2.9"
   },
   "devDependencies": {
     "@shopify/eslint-plugin": "^41.2.0",
-    "@types/node": "^17.0.12",
-    "@types/react": "17.0.37",
     "@typescript-eslint/eslint-plugin": "^5.16.0",
     "@typescript-eslint/parser": "^5.16.0",
-    "config": "*",
     "eslint": "^8.12",
     "eslint-config-labrys": "1.0.2",
     "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-jsx-a11y": "^6.5.1",
     "eslint-plugin-react": "^7.29.4",
     "eslint-plugin-react-hooks": "^4.3.0",
-    "tsconfig": "*",
     "typescript": "^4.6.3"
   }
 }
