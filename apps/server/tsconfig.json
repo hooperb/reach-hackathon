@@ -1,8 +1,12 @@
 {
   "extends": "tsconfig/base.json",
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"],
   "compilerOptions": {
-    "outDir": "dist"
+    "baseUrl": "../../packages",
+    // this needs to list every project that is being imported from within the monorepo so we dont need to build all packages during development
+    "paths": {
+      "database": ["database/src"]
+    }
   }
 }

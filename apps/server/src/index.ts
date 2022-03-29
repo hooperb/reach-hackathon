@@ -1,10 +1,15 @@
 import compression from "compression";
 import cors from "cors";
+import { connect } from "database";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 
-const port = process.env.PORT || 3000;
+import routes from "./routes";
+
+connect();
+
+const port = process.env.PORT || 3030;
 
 const app = express();
 
@@ -12,6 +17,7 @@ const app = express();
 app.use(helmet());
 app.use(compression());
 app.use(cors());
+app.use(express.json());
 
 if (process.env.NODE_ENV === "production") {
   app.use(morgan("combined"));
@@ -27,3 +33,5 @@ app.listen(port, () => {
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
+
+app.use(routes);
