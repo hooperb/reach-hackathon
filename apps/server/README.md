@@ -9,3 +9,7 @@
 The `dev` and `start` scripts both load `.env` files in using the `dotenv` require method, see [here](https://github.com/motdotla/dotenv#preload) for details.
 
 The `dev` script uses `tsconfig-paths` to enable support for the `paths` feature of `tsconfig` in `ts-node-dev`. See [here](https://medium.com/@fmoessle/typescript-paths-with-ts-node-ts-node-dev-and-jest-671deacf6428) for details.
+
+## Dotenv
+
+Use [dotenv sync]() to fetch the `.env` file with `dotenv-cli pull`. You will need to be added to the Dotenv Sync organisation.
