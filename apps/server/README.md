@@ -56,6 +56,8 @@ docker run -p 3000:3000 repo-template
 
 For most projects we use Google Cloud's Artifact Registry to store the Docker containers, see Google's guide on how to get started [here](https://cloud.google.com/artifact-registry/docs/docker/store-docker-container-images).
 
+Push both `<image-name>:latest` and `<image-name>:latest-staging` so that we can use them for the Kubernetes deployment.
+
 ## Kubernetes
 
 Kubernetes is a way of managing multiple containers. It is an abstraction layer on top of a number of VMs that helps to allocate resources, and replicate containers depending on auto-scaling rules.
