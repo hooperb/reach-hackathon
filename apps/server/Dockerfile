@@ -1,6 +1,7 @@
 # install stage
-FROM node:current
+FROM node:lts-alpine as builder
 
+# set the working directory
 WORKDIR /app
 
 # copy the JSON files
@@ -18,6 +19,14 @@ COPY out/full .
 # build the app
 RUN npx turbo run build --scope=server --include-dependencies --no-deps
 
+# switch to non-root user
+USER node
+
+# add healthcheck
+HEALTHCHECK CMD curl --fail http://localhost:3000 || exit 1   
+
+# expose port 3000
+EXPOSE 3000
+
 CMD PORT=3000 npx turbo run start --scope=server
 
-EXPOSE 3000
