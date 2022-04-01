@@ -7,12 +7,3 @@ metadata:
 spec:
   rules:
     - host: "https://project-slug-staging.labrys.group" # `staging_url` from Terraform output
-      http:
-        paths:
-          - path: /*
-            pathType: Prefix
-            backend:
-              service:
-                name: repo-template-server
-                port:
-                  number: 80
