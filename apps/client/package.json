@@ -10,11 +10,19 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@chakra-ui/react": "^1.8.8",
+    "@emotion/react": "^11",
+    "@emotion/styled": "^11",
+    "@json-rpc-tools/utils": "^1.7.6",
+    "@walletconnect/client": "^1.7.7",
+    "algorand-walletconnect-qrcode-modal": "^1.7.4",
+    "algosdk": "^1.15.0",
+    "framer-motion": "^6",
     "next": "12.0.8",
+    "next-transpile-modules": "9.0.0",
     "react": "17.0.2",
     "react-dom": "17.0.2",
-    "ui": "*",
-    "next-transpile-modules": "9.0.0"
+    "ui": "*"
   },
   "devDependencies": {
     "@types/node": "^17.0.12",
