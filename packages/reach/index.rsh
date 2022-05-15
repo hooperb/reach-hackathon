@@ -1,78 +1,119 @@
 "reach 0.1";
-
-// Game data structure
-
-// 5 | 0 0 0 0 0 0 0 0
-// 4 | 0 0 0 0 0 0 0 0
-// 3 | 0 0 0 0 0 0 0 0
-// 2 | 0 0 0 0 0 0 0 0
-// 1 | 0 0 0 0 0 Y 0 0
-// 0 | Y 0 0 0 Y R R R
-//    ----------------
-//     0 1 2 3 4 5 6 7
-
-// can be expressed as:
-// key is of type placement, {y: number, x: number}
-// const gameBoard = [
-//   {key: 00, value: Y},
-//   {key: 04, value: Y},
-//   {key: 05, value: R},
-//   {key: 06, value: R},
-//   {key: 07, value: R},
-//   {key: 15, value: Y},
-// ]
-
-// const makeMove = (_placement, _colour) => {
-//   // check all parameters to make sure move is legimate
-//   require(isTurn(msg.sender), "Not your turn!!"));
-//   require(gameBoard[placement] == 0, "This tile is filled");
-//   if(placement.y != 0) {
-//     require(gameBoard[_placement.y - 1, _placement.x] != 0, "Invalid move!")
-//   }
-//   // if it's made it here it's a valid move
-//   gameBoard[placement] = _colour;
-//   return true;
-// }
+"use strict";
 
 export const main = Reach.App(() => {
-	// Types
-	const Placement = Object({
-		x: UInt,
-		y: UInt,
-	});
-
-	// Functions callable by user(s)
-	const InitialiseGameFunctionality = {
-		createGameInstance: Fun([], UInt),
-	};
-	const JoinGameFunctionality = {
-		joinGameInstance: Fun([UInt], Bool),
+	const BasePlayerMechanics = {
+		placeTile: Fun([UInt, UInt], Bool),
+		checkMate: Fun([], Bool),
+		gamesOver: Fun([], Bool),
 	};
 
-	const BasePlayerFunctionality = {
-		getGameBoard: Fun([], Bytes(48)),
-		makeMove: Fun([Placement], Bool),
-		checkForWin: Fun([], Bool),
-	};
-
-	// Participants
-	const PlayerOne = Participant("PlayerOne", {
-		...InitialiseGameFunctionality,
-		...BasePlayerFunctionality,
-	});
-	const PlayerTwo = Participant("PlayerTwo", {
-		...JoinGameFunctionality,
-		...BasePlayerFunctionality,
+	const D = Participant("Deployer", {
+		// ...BasePlayerMechanics,
+		price: UInt,
+		deadline: UInt,
+		creator: Address,
+		ready: Fun([], Null),
 	});
 
-	// The actual game board
+	const C = API("Challenger", {
+		...BasePlayerMechanics,
+		iAcceptGoodSir: Fun([], Bool),
+	});
+
+	const A = API("Acceptee", {
+		...BasePlayerMechanics,
+		iAcceptGoodSir: Fun([], Bool),
+	});
+
 	init();
-	// The first one to publish deploys the contract
-	PlayerOne.publish();
-	commit();
-	// The second one to publish always attaches
-	PlayerTwo.publish();
-	commit();
 
+	D.only(() => {
+		const price = declassify(interact.price);
+		const deadline = declassify(interact.deadline);
+		const creator = declassify(interact.creator);
+	});
+
+	D.publish(price, deadline, creator);
+	commit();
+	D.publish();
+	D.interact.ready(); // a flag that returns when the contract is succesfully created
+
+	const deadlineBlock = relativeTime(deadline);
+
+	// Board data structure
+	// 5 | 0 0 0 0 0 0 0 0
+	// 4 | 0 0 0 0 0 0 0 0
+	// 3 | 0 0 0 0 0 0 0 0
+	// 2 | 0 0 0 0 0 0 0 0
+	// 1 | 0 0 0 0 0 0 0 0
+	// 0 | 0 0 0 0 0 0 0 0
+	//    ----------------
+	//     0 1 2 3 4 5 6 7
+	// const board = Array(Array(Null, 8), 6);
+
+	// winner = R, Y or D => game over, record whos turn it is too
+	// array(UInt, [0, 0, 0, 0, 0, 0, 0]);
+	const [winner, turn, board] = parallelReduce([
+		"",
+		"R",
+		array(UInt, ["", "", "", ""]),
+	])
+		.invariant(
+			balance() == price * 2 // can only ever be wager * 2
+		)
+		.while(polyEq(winner, ""))
+		// D is RED
+		.api_(C.placeTile, (x, y) => {
+			// check its d turn
+			check(turn == "R");
+			// check valid move
+			check(x >= 0 || x <= 5 || y >= 0 || y <= 7, "in bounds");
+			if (y != 0) {
+				check(
+					!polyEq(board[x][y - 1], Null),
+					"needs to be something to place on top of"
+				);
+			}
+			check(polyEq(board[x][y], Null), "theres not a tile there already");
+
+			return [
+				0,
+				(k) => {
+					k(true); // returns true to the user
+					board[x][y] = "R";
+					turn = "Y";
+				},
+			];
+		})
+		// A is YELLOW
+		.api_(A.placeTile, (x, y) => {
+			// check its d turn
+			check(turn == "Y");
+			// check valid move
+			check(x >= 0 || x <= 5 || y >= 0 || y <= 7, "in bounds");
+			if (y != 0) {
+				check(
+					!polyEq(board[x][y - 1], Null),
+					"needs to be something to place on top of"
+				);
+			}
+			check(polyEq(board[x][y], Null), "theres not a tile there already");
+
+			return [
+				0,
+				(k) => {
+					k(true); // returns true to the user
+					board[x][y] = "Y";
+					turn = "R";
+				},
+			];
+		})
+		.timeout(deadlineBlock, () => {
+			const [[], k] = call(C.gamesOver);
+			k(true);
+			return [false, howMany];
+		});
+	commit();
 	exit();
 });
