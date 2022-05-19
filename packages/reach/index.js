@@ -1,9 +1,14 @@
+/* eslint-disable */
+
 import React from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
 import * as backend from "./build/index.main.mjs";
 import { loadStdlib } from "@reach-sh/stdlib";
-import MyAlgoConnect from "@reach-sh/stdlib/ALGO_MyAlgoConnect";
+import {
+	ALGO_MyAlgoConnect as MyAlgoConnect,
+	//ALGO_WalletConnect as WalletConnect
+} from "@reach-sh/stdlib";
 const stdlib = loadStdlib(process.env);
 const providerEnv = undefined; // 'TestNet'
 stdlib.setWalletFallback(
@@ -30,7 +35,7 @@ class App extends React.Component {
 		super(props);
 		this.state = { mode: "Connect" };
 	}
-	async componentDidMount() {
+	async connectToWallet() {
 		const acc = await stdlib.getDefaultAccount();
 		try {
 			const faucet = await stdlib.getFaucet();
@@ -39,6 +44,9 @@ class App extends React.Component {
 			console.error(e);
 		}
 		this.setState({ mode: "Select", acc });
+	}
+	async componentDidMount() {
+		console.log("hello");
 	}
 	selectRole(role) {
 		this.setState({ mode: "RunRole", role });
@@ -64,6 +72,9 @@ class App extends React.Component {
 				<div>
 					Please wait while we connect to your account. If this takes more than
 					a few seconds, there may be something wrong.
+					<button onClick={() => parent.connectToWallet()}>
+						Connect Wallet
+					</button>
 				</div>
 			);
 		} else if (mode === "Select") {
@@ -123,6 +134,7 @@ class Create extends React.Component {
 				},
 			});
 		} catch (e) {
+			console.log("erroring here");
 			if (e !== 42) {
 				throw e;
 			}

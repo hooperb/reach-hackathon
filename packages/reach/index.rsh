@@ -1,119 +1,107 @@
-"reach 0.1";
-"use strict";
+'reach 0.1';
+'use strict';
 
 export const main = Reach.App(() => {
-	const BasePlayerMechanics = {
-		placeTile: Fun([UInt, UInt], Bool),
-		checkMate: Fun([], Bool),
-		gamesOver: Fun([], Bool),
-	};
+    const D = Participant('Admin', {
+        price: UInt,
+        deadline: UInt,
+        ready: Fun([], Null),
+    });
+    const A = API('Attendee', {
+        iWillGo: Fun([], Bool),
+        makeMove: Fun([UInt, UInt], Bool)
+    });
+    const C = API('Checkin', {
+        theyCame: Fun([Address], Bool),
+        timesUp: Fun([], Bool),
+    });
+    init();
 
-	const D = Participant("Deployer", {
-		// ...BasePlayerMechanics,
-		price: UInt,
-		deadline: UInt,
-		creator: Address,
-		ready: Fun([], Null),
-	});
+    D.only(() => {
+        const price = declassify(interact.price);
+        const deadline = declassify(interact.deadline);
+        check(price < 100000000);
+    });
+    D.publish(price, deadline);
+    D.interact.ready();
+    check(price < 100000000);
 
-	const C = API("Challenger", {
-		...BasePlayerMechanics,
-		iAcceptGoodSir: Fun([], Bool),
-	});
+    const RSVPs = new Map(Object({
+        came: Bool,
+    }));
 
-	const A = API("Acceptee", {
-		...BasePlayerMechanics,
-		iAcceptGoodSir: Fun([], Bool),
-	});
+    // const RBoard = [];
+    // const YBoard = array(UInt, []);
+    // const Board = array(UInt, []);
+    // const Move = Tuple(UInt, UInt);
+    // const RBoard = new Map(UInt);
+    const YBoard = new Map(UInt);
 
-	init();
+    const [ keepGoing, howMany ] =
+        parallelReduce([true, 0])
+        .define(() => {
+          const contains = (arrInput, current) => arrInput.forEach((item) => check(item != current));
+        })
+        .invariant(
+            true
+            && balance() == howMany * price
+            && RSVPs.size() == howMany
+        )
+        .while( keepGoing )
+        .api(A.iWillGo,
+            () => {
+                check(isNone(RSVPs[this]), "they haven't rsvpd");
+            },
+            () => price, // transfer amount
+            (k) => {
+                check(isNone(RSVPs[this]), "they haven't rsvpd");
+                RSVPs[this] = { came: false };
+                k(true);
+                return [ keepGoing, howMany + 1 ];
+            }
+        )
+        .api(A.makeMove,
+          (x, y) => {
+            check((x < 7) && (x >= 0), "x is good");
+            check((y < 7) && (x >= 0), "y is good");
+            // const move = [x, y];
+            const unique = (x + y) * (x + y + 1) / 2 + x;
+            // const yBoard = Array.replicate(24, YBoard);
+            check(YBoard[this].contains([unique]) != "Y");
+            // contains(yBoard, unique);
+          },
+          (_, _) => 0,
+          (x, y, k) => {
+            check((x < 7) && (x >= 0), "x is good");
+            check((y < 7) && (x >= 0), "y is good");
+            k(true);
+            return [ keepGoing, howMany ];
+          }
+        )
+        .api(C.theyCame,
+            (who) => {
+                check(isSome(RSVPs[who]), "they rsvpd");
+                check(this == D, "you are the boss");
+            },
+            (_) => 0,
+            (who, k) => {
+                check(isSome(RSVPs[who]), "they rsvpd");
+                check(this == D, "you are the boss");
+                transfer(price).to(who);
+                delete RSVPs[who];
+                k(true);
+                return [ keepGoing, howMany - 1 ];
+            }
+        )
+        .timeout( absoluteTime(deadline), () => {
+            const [ [], k ] = call(C.timesUp);
+            k(true);
+            return [ false, howMany ]
+        });
+    const leftovers = howMany;
 
-	D.only(() => {
-		const price = declassify(interact.price);
-		const deadline = declassify(interact.deadline);
-		const creator = declassify(interact.creator);
-	});
+    transfer(leftovers * price).to(D);
+    commit();
 
-	D.publish(price, deadline, creator);
-	commit();
-	D.publish();
-	D.interact.ready(); // a flag that returns when the contract is succesfully created
-
-	const deadlineBlock = relativeTime(deadline);
-
-	// Board data structure
-	// 5 | 0 0 0 0 0 0 0 0
-	// 4 | 0 0 0 0 0 0 0 0
-	// 3 | 0 0 0 0 0 0 0 0
-	// 2 | 0 0 0 0 0 0 0 0
-	// 1 | 0 0 0 0 0 0 0 0
-	// 0 | 0 0 0 0 0 0 0 0
-	//    ----------------
-	//     0 1 2 3 4 5 6 7
-	// const board = Array(Array(Null, 8), 6);
-
-	// winner = R, Y or D => game over, record whos turn it is too
-	// array(UInt, [0, 0, 0, 0, 0, 0, 0]);
-	const [winner, turn, board] = parallelReduce([
-		"",
-		"R",
-		array(UInt, ["", "", "", ""]),
-	])
-		.invariant(
-			balance() == price * 2 // can only ever be wager * 2
-		)
-		.while(polyEq(winner, ""))
-		// D is RED
-		.api_(C.placeTile, (x, y) => {
-			// check its d turn
-			check(turn == "R");
-			// check valid move
-			check(x >= 0 || x <= 5 || y >= 0 || y <= 7, "in bounds");
-			if (y != 0) {
-				check(
-					!polyEq(board[x][y - 1], Null),
-					"needs to be something to place on top of"
-				);
-			}
-			check(polyEq(board[x][y], Null), "theres not a tile there already");
-
-			return [
-				0,
-				(k) => {
-					k(true); // returns true to the user
-					board[x][y] = "R";
-					turn = "Y";
-				},
-			];
-		})
-		// A is YELLOW
-		.api_(A.placeTile, (x, y) => {
-			// check its d turn
-			check(turn == "Y");
-			// check valid move
-			check(x >= 0 || x <= 5 || y >= 0 || y <= 7, "in bounds");
-			if (y != 0) {
-				check(
-					!polyEq(board[x][y - 1], Null),
-					"needs to be something to place on top of"
-				);
-			}
-			check(polyEq(board[x][y], Null), "theres not a tile there already");
-
-			return [
-				0,
-				(k) => {
-					k(true); // returns true to the user
-					board[x][y] = "Y";
-					turn = "R";
-				},
-			];
-		})
-		.timeout(deadlineBlock, () => {
-			const [[], k] = call(C.gamesOver);
-			k(true);
-			return [false, howMany];
-		});
-	commit();
-	exit();
+    exit();
 });
