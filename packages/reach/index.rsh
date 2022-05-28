@@ -45,125 +45,105 @@ export const main = Reach.App(() => {
   const keepGoing = true;
   const winner = false;
 
-  const [pot, howMany, turn, zero, one, two, three, four, five] =
-    parallelReduce([
-      0,
-      0,
-      "R", // start on red
+  const [pot, howMany, turn, board] = parallelReduce([
+    0,
+    0,
+    "R", // start on red
+    [
       array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // zero
       array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // two
       array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // three
       array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // four
       array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // five
       array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // six
-    ])
-      .define(() => {
-        const emptyTile = (x, y) => {
-          return x < 7 && x >= 0 && y < 6 && y >= 0;
-        };
-      })
-      .invariant(true && balance() == pot && !winner)
-      .while(keepGoing)
-      .api(BP.getBoard, (k) => {
-        k([zero, one, two, three, four, five]);
-        return [pot, howMany, turn, zero, one, two, three, four, five];
-      })
-      // Blue Player Actions
-      .api(
-        BP.acceptGame,
-        () => {
-          check(howMany <= 2, "not full");
-          check(!opponents.member(this), "they haven't joined already");
-        },
-        () => price, // transfer amount
-        (k) => {
-          check(howMany <= 2, "not full");
-          check(!opponents.member(this), "they haven't joined already");
-          opponents.insert(this);
-          k(true);
-          return [
-            pot + price,
-            howMany + 1,
-            turn,
-            zero,
-            one,
-            two,
-            three,
-            four,
-            five,
-          ];
-        }
-      )
-      .api(
-        BP.makeMove,
-        (x, y) => {
-          check(howMany == 2, "full");
-          check(opponents.member(this), "real player");
-          check(turn === "B");
-          check(emptyTile(x, y), "x,y good!");
-        },
-        (_, _) => 0,
-        (x, y, k) => {
-          check(howMany == 2, "full");
-          check(opponents.member(this), "real player");
-          check(turn == "B");
-          check(emptyTile(x, y), "x,y good!");
-          k(true);
-          const copy = Array.set(zero, y, "B");
-          return [pot, howMany, "R", copy, one, two, three, four, five];
-        }
-      )
-      // Red Player Actions
-      .api(
-        RP.acceptGame,
-        () => {
-          check(howMany <= 2, "not full");
-          check(!opponents.member(this), "they haven't joined already");
-        },
-        () => price, // transfer amount
-        (k) => {
-          check(howMany <= 2, "not full");
-          check(!opponents.member(this), "they haven't joined already");
-          opponents.insert(this);
-          k(true);
-          return [
-            pot + price,
-            howMany + 1,
-            turn,
-            zero,
-            one,
-            two,
-            three,
-            four,
-            five,
-          ];
-        }
-      )
-      .api(
-        RP.makeMove,
-        (x, y) => {
-          check(howMany == 2, "full");
-          check(opponents.member(this), "real player");
-          check(turn == "R");
-          check(emptyTile(x, y), "x,y good!");
-        },
-        (_, _) => 0,
-        (x, y, k) => {
-          check(howMany == 2, "full");
-          check(opponents.member(this), "real player");
-          check(turn == "R");
-          check(emptyTile(x, y), "x,y good!");
-          k(true);
-          const copy = Array.set(zero, y, "R");
-          return [pot, howMany, "R", copy, one, two, three, four, five];
-        }
-      )
-      // Games over protocol
-      .timeout(absoluteTime(deadline), () => {
-        const [[], k] = call(BP.timesUp);
+    ],
+  ])
+    .define(() => {
+      const inBounds = (x, y) => {
+        return x < 7 && x >= 0 && y < 6 && y >= 0;
+      };
+    })
+    .invariant(true && balance() == pot && !winner)
+    .while(keepGoing)
+    .api(BP.getBoard, (k) => {
+      k(board);
+      return [pot, howMany, turn, board];
+    })
+    // Blue Player Actions
+    .api(
+      BP.acceptGame,
+      () => {
+        check(howMany <= 2, "not full");
+        check(!opponents.member(this), "they haven't joined already");
+      },
+      () => price, // transfer amount
+      (k) => {
+        check(howMany <= 2, "not full");
+        check(!opponents.member(this), "they haven't joined already");
+        opponents.insert(this);
         k(true);
-        return [pot, howMany, turn, zero, one, two, three, four, five];
-      });
+        return [pot + price, howMany + 1, turn, board];
+      }
+    )
+    .api(
+      BP.makeMove,
+      (x, y) => {
+        check(howMany == 2, "full");
+        check(opponents.member(this), "real player");
+        check(turn === "B");
+        check(inBounds(x, y), "x,y good!");
+      },
+      (_, _) => 0,
+      (x, y, k) => {
+        check(howMany == 2, "full");
+        check(opponents.member(this), "real player");
+        check(turn == "B");
+        check(inBounds(x, y), "x,y good!");
+        k(true);
+        // const copy = Array.set(zero, y, "B");
+        return [pot, howMany, "R", board];
+      }
+    )
+    // Red Player Actions
+    .api(
+      RP.acceptGame,
+      () => {
+        check(howMany <= 2, "not full");
+        check(!opponents.member(this), "they haven't joined already");
+      },
+      () => price, // transfer amount
+      (k) => {
+        check(howMany <= 2, "not full");
+        check(!opponents.member(this), "they haven't joined already");
+        opponents.insert(this);
+        k(true);
+        return [pot + price, howMany + 1, turn, board];
+      }
+    )
+    .api(
+      RP.makeMove,
+      (x, y) => {
+        check(howMany == 2, "full");
+        check(opponents.member(this), "real player");
+        check(turn == "R");
+        check(inBounds(x, y), "x,y good!");
+      },
+      (_, _) => 0,
+      (x, y, k) => {
+        check(howMany == 2, "full");
+        check(opponents.member(this), "real player");
+        check(turn == "R");
+        check(inBounds(x, y), "x,y good!");
+        k(true);
+        return [pot, howMany, "R", board];
+      }
+    )
+    // Games over protocol
+    .timeout(absoluteTime(deadline), () => {
+      const [[], k] = call(BP.timesUp);
+      k(true);
+      return [pot, howMany, turn, board];
+    });
   if (winner && pot > 0) {
     transfer(pot).to(D);
   }
