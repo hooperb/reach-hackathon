@@ -1,107 +1,174 @@
-'reach 0.1';
-'use strict';
+/* eslint-disable no-array-constructor */
+/* eslint-disable arrow-body-style */
+"reach 0.1";
+"use strict";
+
+const BOARD = Tuple(
+  Array(Bytes(1), 8),
+  Array(Bytes(1), 8),
+  Array(Bytes(1), 8),
+  Array(Bytes(1), 8),
+  Array(Bytes(1), 8),
+  Array(Bytes(1), 8)
+);
 
 export const main = Reach.App(() => {
-    const D = Participant('Admin', {
-        price: UInt,
-        deadline: UInt,
-        ready: Fun([], Null),
-    });
-    const A = API('Attendee', {
-        iWillGo: Fun([], Bool),
-        makeMove: Fun([UInt, UInt], Bool)
-    });
-    const C = API('Checkin', {
-        theyCame: Fun([Address], Bool),
-        timesUp: Fun([], Bool),
-    });
-    init();
+  const D = Participant("Admin", {
+    price: UInt,
+    deadline: UInt,
+    ready: Fun([], Null),
+  });
+  const RP = API("RedPlayer", {
+    acceptGame: Fun([], Bool),
+    makeMove: Fun([UInt, UInt], Bool),
+    // timesUp: Fun([], Bool),
+  });
+  const BP = API("BluePlayer", {
+    getBoard: Fun([], BOARD),
+    acceptGame: Fun([], Bool),
+    makeMove: Fun([UInt, UInt], Bool),
+    timesUp: Fun([], Bool),
+  });
 
-    D.only(() => {
-        const price = declassify(interact.price);
-        const deadline = declassify(interact.deadline);
-        check(price < 100000000);
-    });
-    D.publish(price, deadline);
-    D.interact.ready();
+  init();
+
+  D.only(() => {
+    const price = declassify(interact.price);
+    const deadline = declassify(interact.deadline);
     check(price < 100000000);
+  });
+  D.publish(price, deadline);
+  D.interact.ready();
+  check(price < 100000000);
 
-    const RSVPs = new Map(Object({
-        came: Bool,
-    }));
+  const opponents = new Set();
+  const keepGoing = true;
+  const winner = false;
 
-    // const RBoard = [];
-    // const YBoard = array(UInt, []);
-    // const Board = array(UInt, []);
-    // const Move = Tuple(UInt, UInt);
-    // const RBoard = new Map(UInt);
-    const YBoard = new Map(UInt);
+  const [pot, howMany, turn, zero, one, two, three, four, five] =
+    parallelReduce([
+      0,
+      0,
+      "R", // start on red
+      array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // zero
+      array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // two
+      array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // three
+      array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // four
+      array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // five
+      array(Bytes(1), ["0", "0", "0", "0", "0", "0", "0", "0"]), // six
+    ])
+      .define(() => {
+        const emptyTile = (x, y) => {
+          return x < 7 && x >= 0 && y < 6 && y >= 0;
+        };
+      })
+      .invariant(true && balance() == pot && !winner)
+      .while(keepGoing)
+      .api(BP.getBoard, (k) => {
+        k([zero, one, two, three, four, five]);
+        return [pot, howMany, turn, zero, one, two, three, four, five];
+      })
+      // Blue Player Actions
+      .api(
+        BP.acceptGame,
+        () => {
+          check(howMany <= 2, "not full");
+          check(!opponents.member(this), "they haven't joined already");
+        },
+        () => price, // transfer amount
+        (k) => {
+          check(howMany <= 2, "not full");
+          check(!opponents.member(this), "they haven't joined already");
+          opponents.insert(this);
+          k(true);
+          return [
+            pot + price,
+            howMany + 1,
+            turn,
+            zero,
+            one,
+            two,
+            three,
+            four,
+            five,
+          ];
+        }
+      )
+      .api(
+        BP.makeMove,
+        (x, y) => {
+          check(howMany == 2, "full");
+          check(opponents.member(this), "real player");
+          check(turn === "B");
+          check(emptyTile(x, y), "x,y good!");
+        },
+        (_, _) => 0,
+        (x, y, k) => {
+          check(howMany == 2, "full");
+          check(opponents.member(this), "real player");
+          check(turn == "B");
+          check(emptyTile(x, y), "x,y good!");
+          k(true);
+          const copy = Array.set(zero, y, "B");
+          return [pot, howMany, "R", copy, one, two, three, four, five];
+        }
+      )
+      // Red Player Actions
+      .api(
+        RP.acceptGame,
+        () => {
+          check(howMany <= 2, "not full");
+          check(!opponents.member(this), "they haven't joined already");
+        },
+        () => price, // transfer amount
+        (k) => {
+          check(howMany <= 2, "not full");
+          check(!opponents.member(this), "they haven't joined already");
+          opponents.insert(this);
+          k(true);
+          return [
+            pot + price,
+            howMany + 1,
+            turn,
+            zero,
+            one,
+            two,
+            three,
+            four,
+            five,
+          ];
+        }
+      )
+      .api(
+        RP.makeMove,
+        (x, y) => {
+          check(howMany == 2, "full");
+          check(opponents.member(this), "real player");
+          check(turn == "R");
+          check(emptyTile(x, y), "x,y good!");
+        },
+        (_, _) => 0,
+        (x, y, k) => {
+          check(howMany == 2, "full");
+          check(opponents.member(this), "real player");
+          check(turn == "R");
+          check(emptyTile(x, y), "x,y good!");
+          k(true);
+          const copy = Array.set(zero, y, "R");
+          return [pot, howMany, "R", copy, one, two, three, four, five];
+        }
+      )
+      // Games over protocol
+      .timeout(absoluteTime(deadline), () => {
+        const [[], k] = call(BP.timesUp);
+        k(true);
+        return [pot, howMany, turn, zero, one, two, three, four, five];
+      });
+  if (winner && pot > 0) {
+    transfer(pot).to(D);
+  }
 
-    const [ keepGoing, howMany ] =
-        parallelReduce([true, 0])
-        .define(() => {
-          const contains = (arrInput, current) => arrInput.forEach((item) => check(item != current));
-        })
-        .invariant(
-            true
-            && balance() == howMany * price
-            && RSVPs.size() == howMany
-        )
-        .while( keepGoing )
-        .api(A.iWillGo,
-            () => {
-                check(isNone(RSVPs[this]), "they haven't rsvpd");
-            },
-            () => price, // transfer amount
-            (k) => {
-                check(isNone(RSVPs[this]), "they haven't rsvpd");
-                RSVPs[this] = { came: false };
-                k(true);
-                return [ keepGoing, howMany + 1 ];
-            }
-        )
-        .api(A.makeMove,
-          (x, y) => {
-            check((x < 7) && (x >= 0), "x is good");
-            check((y < 7) && (x >= 0), "y is good");
-            // const move = [x, y];
-            const unique = (x + y) * (x + y + 1) / 2 + x;
-            // const yBoard = Array.replicate(24, YBoard);
-            check(YBoard[this].contains([unique]) != "Y");
-            // contains(yBoard, unique);
-          },
-          (_, _) => 0,
-          (x, y, k) => {
-            check((x < 7) && (x >= 0), "x is good");
-            check((y < 7) && (x >= 0), "y is good");
-            k(true);
-            return [ keepGoing, howMany ];
-          }
-        )
-        .api(C.theyCame,
-            (who) => {
-                check(isSome(RSVPs[who]), "they rsvpd");
-                check(this == D, "you are the boss");
-            },
-            (_) => 0,
-            (who, k) => {
-                check(isSome(RSVPs[who]), "they rsvpd");
-                check(this == D, "you are the boss");
-                transfer(price).to(who);
-                delete RSVPs[who];
-                k(true);
-                return [ keepGoing, howMany - 1 ];
-            }
-        )
-        .timeout( absoluteTime(deadline), () => {
-            const [ [], k ] = call(C.timesUp);
-            k(true);
-            return [ false, howMany ]
-        });
-    const leftovers = howMany;
+  commit();
 
-    transfer(leftovers * price).to(D);
-    commit();
-
-    exit();
+  exit();
 });
