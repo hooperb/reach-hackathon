@@ -59,7 +59,7 @@ const getBoard = async (whoi) => {
   const who = users[whoi];
   await stdlib.balanceOf(who);
   const contract = await who.contract(backend, deployedContract.getInfo());
-  const board = await contract.apis.BluePlayer.getBoard();
+  const board = await contract.apis.Utility.getBoard();
   console.log("---------");
   console.log(board);
   console.log("---------");
@@ -70,25 +70,107 @@ const timesup = async (whoi) => {
   const who = users[whoi];
   await stdlib.balanceOf(who);
   const contract = await who.contract(backend, deployedContract.getInfo());
-  await contract.apis.BluePlayer.timesUp();
+  await contract.apis.Utility.timesUp();
 };
 
-await acceptGame(B);
-await acceptGame(R);
+const makeMove = async (whoi, x, y) => {
+  const who = users[whoi];
+  await stdlib.balanceOf(who);
+  const contract = await who.contract(backend, deployedContract.getInfo());
+  const test =
+    whoi === B
+      ? await contract.apis.BluePlayer.makeMove(x, y)
+      : await contract.apis.RedPlayer.makeMove(x, y);
+};
 
-await getBoard(B);
-// await makeMove(1, 11, 11);
-// await willError(() => makeMove(1, 11, 2));
-// await rsvp(0);
-// await rsvp(1);
-// await rsvp(2);
-// await rsvp(4);
-// await willError(() => rsvp(4));
-// await checkin(4);
-// await checkin(0);
-// await willError(() => checkin(3));
-// await checkin(2);
-// await willError(() => checkin(2));
+const isWinner = async (x, y, dir) => {
+  const who = users[0];
+  await stdlib.balanceOf(who);
+  const contract = await who.contract(backend, deployedContract.getInfo());
+  const winner = await contract.apis.Utility.checkWinner(x, y, dir);
+  console.log("-------");
+  console.log("The winner is (R = red, B = blue, N = No winner): ", winner);
+  console.log("-------");
+};
+
+// needs to be one of A, D, L, R
+const gameScenario = "R";
+// test the user winning with a horizontal line
+if (gameScenario == "A") {
+  await acceptGame(B);
+  await acceptGame(R);
+  await getBoard(B);
+  await makeMove(B, 0, 0);
+  await makeMove(R, 0, 1);
+  await makeMove(B, 1, 0);
+  await makeMove(R, 0, 2);
+  await makeMove(B, 2, 0);
+  await makeMove(R, 0, 3);
+  await makeMove(B, 3, 0);
+  // Blue should win
+  await isWinner(0, 0, "A");
+  await getBoard(B);
+
+  // test the user winning with a downline
+} else if (gameScenario == "D") {
+  await acceptGame(B);
+  await acceptGame(R);
+  await makeMove(B, 0, 0);
+  await makeMove(R, 0, 1);
+  await makeMove(B, 1, 0);
+  await makeMove(R, 0, 2);
+  await makeMove(B, 2, 0);
+  await makeMove(R, 0, 3);
+  await makeMove(B, 5, 0);
+  await makeMove(R, 0, 4);
+  // Red should win
+  await isWinner(0, 1, "D");
+  await getBoard(B);
+  // test the user within the a left diagonal
+} else if (gameScenario == "L") {
+  // 0 0 0 B
+  // 0 0 B R
+  // 0 B B R
+  // B R R R 0 R
+  await acceptGame(B);
+  await acceptGame(R);
+  await makeMove(B, 0, 0);
+  await makeMove(R, 1, 0);
+  await makeMove(B, 1, 1);
+  await makeMove(R, 2, 0);
+  await makeMove(B, 2, 1);
+  await makeMove(R, 3, 0);
+  await makeMove(B, 2, 2);
+  await makeMove(R, 3, 1);
+  await makeMove(B, 3, 2);
+  await makeMove(R, 5, 0);
+  await makeMove(B, 3, 3);
+  // Blue should win
+  await isWinner(0, 0, "L");
+  await getBoard(B);
+} else if (gameScenario == "R") {
+  // R
+  // B R
+  // R R R
+  // B B B R B
+  await acceptGame(B);
+  await acceptGame(R);
+  await makeMove(B, 0, 0);
+  await makeMove(R, 0, 1);
+  await makeMove(B, 0, 2);
+  await makeMove(R, 0, 3);
+  await makeMove(B, 1, 0);
+  await makeMove(R, 1, 1);
+  await makeMove(B, 2, 0);
+  await makeMove(R, 1, 2);
+  await makeMove(B, 4, 0);
+  await makeMove(R, 2, 1);
+  await makeMove(B, 5, 0);
+  await makeMove(R, 3, 0);
+  // Red should win
+  await isWinner(0, 3, "R");
+  await getBoard(B);
+}
 
 console.log("We're gonna wait for the deadline");
 await stdlib.wait(deadline);
