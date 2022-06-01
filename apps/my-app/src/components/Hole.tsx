@@ -1,13 +1,14 @@
 interface HoleProps {
-	value: string;
+  value: string;
 }
 
 const Hole = ({ value }: HoleProps) => {
-	return (
-		<div className="Hole">
-			<div className={value}></div>
-		</div>
-	);
+  const test = value === "0" ? undefined : value;
+  return (
+    <div className="Hole">
+      <div className={test}></div>
+    </div>
+  );
 };
 
 export default Hole;

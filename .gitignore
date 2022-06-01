@@ -35,3 +35,4 @@ yarn-error.log*
 # node
 dist
 .env
+packages/reach/.reach/smt-cache/

@@ -42,7 +42,7 @@ try {
   }
 }
 
-const B = 1;
+const B = 0;
 const R = 2;
 
 const acceptGame = async (whoi) => {
@@ -53,16 +53,6 @@ const acceptGame = async (whoi) => {
   whoi === R
     ? await contract.apis.RedPlayer.acceptGame()
     : await contract.apis.BluePlayer.acceptGame();
-};
-
-const getBoard = async (whoi) => {
-  const who = users[whoi];
-  await stdlib.balanceOf(who);
-  const contract = await who.contract(backend, deployedContract.getInfo());
-  const board = await contract.apis.Utility.getBoard();
-  console.log("---------");
-  console.log(board);
-  console.log("---------");
 };
 
 const timesup = async (whoi) => {
@@ -93,6 +83,16 @@ const isWinner = async (x, y, dir) => {
   console.log("-------");
 };
 
+const boardView = async () => {
+  const who = users[0];
+  await stdlib.balanceOf(who);
+  console.log(`Balance before boardView: ${await stdlib.balanceOf(who)}`);
+  const contract = await who.contract(backend, deployedContract.getInfo());
+  const winner = await contract.views.Reader.getBoard();
+
+  console.log(`Balance after boardView: ${await stdlib.balanceOf(who)}`);
+  console.log(winner);
+};
 // needs to be one of A, D, L, R
 const gameScenario = "R";
 // test the user winning with a horizontal line
@@ -153,6 +153,7 @@ if (gameScenario == "A") {
   // B R
   // R R R
   // B B B R B
+  await boardView();
   await acceptGame(B);
   await acceptGame(R);
   await makeMove(B, 0, 0);
@@ -164,23 +165,21 @@ if (gameScenario == "A") {
   await makeMove(B, 2, 0);
   await makeMove(R, 1, 2);
   await makeMove(B, 4, 0);
+  await boardView();
   await makeMove(R, 2, 1);
   await makeMove(B, 5, 0);
   await makeMove(R, 3, 0);
   // Red should win
   await isWinner(0, 3, "R");
-  await getBoard(B);
 }
 
-console.log("We're gonna wait for the deadline");
-await stdlib.wait(deadline);
-
-await timesup(R);
+// await timesup(R);
 
 for (const who of users) {
   console.warn(
     stdlib.formatAddress(who),
     "has",
-    stdlib.formatCurrency(await stdlib.balanceOf(who))
+    stdlib.formatCurrency(await stdlib.balanceOf(who)),
+    who === B ? "Blue" : "Red"
   );
 }
