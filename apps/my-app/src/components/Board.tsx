@@ -3,6 +3,10 @@ import { WalletContext } from "../contexts/walletContext";
 import checkWinner from "../helpers/checkWinner";
 import Slat from "./Slat";
 
+import { createBrowserHistory } from "history";
+import ContractInformation from "./contract/contractInformation";
+const history = createBrowserHistory();
+
 const Board = () => {
   const emptyBoard = new Array(7).fill(new Array(6).fill("0"));
   const [board, setBoard] = useState(emptyBoard);
@@ -10,8 +14,13 @@ const Board = () => {
   const [gameSelected, setGameSelected] = useState(false);
   const [winner, setWinner] = useState("");
 
-  const { walletState, connectToContract, contractBoard, deployContract } =
-    useContext(WalletContext);
+  const {
+    walletState,
+    connectToContract,
+    contractBoard,
+    contractAddress,
+    usedQuery,
+  } = useContext(WalletContext);
 
   // called when a gamemode is selected
   const startGame = () => {
@@ -22,10 +31,6 @@ const Board = () => {
     }
     setGameSelected(true);
     //
-  };
-
-  const deployContractInstance = async () => {
-    deployContract();
   };
 
   const makeMove = (slatID: number) => {
@@ -61,7 +66,7 @@ const Board = () => {
   }, [board, winner]);
 
   return (
-    <>
+    <div className="Game">
       {gameSelected &&
         [...Array(board.length)].map((x, i) => (
           <div key={i} className="Board">
@@ -78,16 +83,19 @@ const Board = () => {
       <div>
         {walletState.connected ? (
           <>
-            <button onClick={() => deployContractInstance()}>
-              Deploy Contract!
-            </button>
-            <button onClick={() => startGame()}>Start Game!</button>
+            <ContractInformation
+              contractAddress={contractAddress}
+              usedQuery={usedQuery}
+            />
           </>
         ) : (
-          <p>Connect your wallet to get started!</p>
+          <>
+            {contractAddress && <p>You've been invited to a game!</p>}
+            <p>Connect your wallet to get started!</p>
+          </>
         )}
       </div>
-    </>
+    </div>
   );
 };
 

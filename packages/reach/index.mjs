@@ -42,14 +42,18 @@ try {
   }
 }
 
-const B = 0;
+const B = 1;
 const R = 2;
 
 const acceptGame = async (whoi) => {
   const who = users[whoi];
   await stdlib.balanceOf(who);
   const contract = await who.contract(backend, deployedContract.getInfo());
-  console.log(`Accepting game for: ${stdlib.formatAddress(who)}`);
+  console.log(
+    `Accepting game for: ${stdlib.formatAddress(who)} (${
+      whoi === R ? "RED" : "BLUE"
+    })`
+  );
   whoi === R
     ? await contract.apis.RedPlayer.acceptGame()
     : await contract.apis.BluePlayer.acceptGame();
@@ -86,12 +90,15 @@ const isWinner = async (x, y, dir) => {
 const boardView = async () => {
   const who = users[0];
   await stdlib.balanceOf(who);
-  console.log(`Balance before boardView: ${await stdlib.balanceOf(who)}`);
   const contract = await who.contract(backend, deployedContract.getInfo());
   const winner = await contract.views.Reader.getBoard();
+};
 
-  console.log(`Balance after boardView: ${await stdlib.balanceOf(who)}`);
-  console.log(winner);
+const readyToPlay = async () => {
+  const who = users[0];
+  const contract = await who.contract(backend, deployedContract.getInfo());
+  const winner = await contract.views.Reader.readyToPlay();
+  console.log("ready to play", winner);
 };
 // needs to be one of A, D, L, R
 const gameScenario = "R";
@@ -154,8 +161,9 @@ if (gameScenario == "A") {
   // R R R
   // B B B R B
   await boardView();
-  await acceptGame(B);
   await acceptGame(R);
+  await acceptGame(B);
+  await readyToPlay();
   await makeMove(B, 0, 0);
   await makeMove(R, 0, 1);
   await makeMove(B, 0, 2);

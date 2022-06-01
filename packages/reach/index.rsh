@@ -26,6 +26,9 @@ export const main = Reach.App(() => {
     getBoard: BOARD,
     getTurn: Bytes(1),
     readyToPlay: Bool,
+    getBlueAddress: Address,
+    getRedAddress: Address,
+    getHowMany: UInt,
   });
   const RP = API("RedPlayer", {
     acceptGame: Fun([], Bool),
@@ -83,6 +86,9 @@ export const main = Reach.App(() => {
         ]);
         V.getTurn.set(turn);
         V.readyToPlay.set(howMany == 2);
+        V.getBlueAddress.set(bluePlayer);
+        V.getRedAddress.set(redPlayer);
+        V.getHowMany.set(howMany);
         const inBounds = (x, y) => {
           return x < 7 && x >= 0 && y < 6 && y >= 0;
         };
@@ -306,13 +312,11 @@ export const main = Reach.App(() => {
       .api(
         BP.acceptGame,
         () => {
-          check(bluePlayer == getAddress(), "not set yet");
           check(howMany <= 2, "not full");
           check(!opponents.member(this), "they haven't joined already");
         },
         () => price, // transfer amount
         (k) => {
-          check(bluePlayer == getAddress(), "not set yet");
           check(howMany <= 2, "not full");
           check(!opponents.member(this), "they haven't joined already");
           opponents.insert(this);

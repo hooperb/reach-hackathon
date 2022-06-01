@@ -9,10 +9,12 @@ function App() {
   return (
     <WalletContextProvider>
       <div className="App">
-        <div className="Game">
-          <Title />
-          <WalletConnection />
-          <Board />
+        <div>
+          <div className="flex-col">
+            <Title />
+            <WalletConnection />
+            <Board />
+          </div>
         </div>
       </div>
     </WalletContextProvider>

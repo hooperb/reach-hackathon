@@ -1,4 +1,4 @@
-import React, { ReactChild, useState, createContext } from "react";
+import React, { ReactChild, useState, createContext, useEffect } from "react";
 import WalletConnect from "@walletconnect/client";
 import { IInternalEvent } from "@walletconnect/types";
 import QRCodeModal from "algorand-walletconnect-qrcode-modal";
@@ -27,6 +27,11 @@ export interface IWarningContext {
   contractBoard?: Array<Array<string>>;
   setContractBoard: (cBoard: Array<Array<string>>) => void;
   deployContract: () => Promise<void>;
+  contractAddress?: string;
+  readyToGo: boolean;
+  gameAccepted: boolean;
+  acceptGame: () => Promise<void>;
+  usedQuery: boolean;
 }
 
 export const WalletContext = createContext({} as IWarningContext);
@@ -42,6 +47,11 @@ export const WalletContextProvider = ({
   const [contractBoard, setContractBoard] = useState<Array<Array<string>>>();
 
   const [contractAddress, setContractAddress] = useState<string>();
+  const [readyToGo, setReadyToGo] = useState(false);
+  const [usedQuery, setUsedQuery] = useState(false);
+  const [gameAccepted, setGameAccepted] = useState(false);
+
+  const [contractInstance, setContractInstance] = useState<any>();
 
   const makeMove = async (x: number, y: number) => {
     if (!userAccount) return;
@@ -49,13 +59,75 @@ export const WalletContextProvider = ({
     await contract.safeApis.BluePlayer.makeMove(x, y);
   };
 
+  const acceptGame = async () => {
+    if (!userAccount || !contractAddress) return;
+    try {
+      const parsed = JSON.parse(contractAddress);
+      const contract = userAccount.contract(backend, parsed);
+
+      console.log(contractInstance);
+
+      try {
+        console.log("about to set");
+        await stdlib.balanceOf(userAccount);
+        console.log(await contract.views.Reader.getBoard());
+        const test = !usedQuery
+          ? await contract.apis.BluePlayer.acceptGame()
+          : await contract.apis.RedPlayer.acceptGame();
+        console.log(test);
+        console.log("getting here");
+        setGameAccepted(true);
+      } catch (err) {
+        console.log(err);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    console.log(usedQuery);
+    console.log(contractInstance);
+    const search = window.location.search;
+    if (!search) return;
+    const contractString = `{ "type": "BigNumber", "hex": "${search.substring(
+      6,
+      search.length
+    )}" }`;
+    setUsedQuery(true);
+    setContractAddress(contractString);
+  }, []);
+
+  useEffect(() => {
+    setInterval(async () => {
+      if (!contractAddress || !userAccount) return;
+      const parsed = JSON.parse(contractAddress);
+      const contract = userAccount.contract(backend, parsed);
+      try {
+        const ready = await contract.views.Reader.readyToPlay();
+        console.log(ready);
+        if (ready[1]) {
+          console.log("setting ready!");
+          setReadyToGo(true);
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    }, 4000);
+  }, [gameAccepted]);
+
+  // useEffect(() => {
+  //   const contractString = '{ "type": "BigNumber", "hex": "0x058bcd1d" }';
+  //   setContractAddress(contractString);
+  // }, [contractAddress]);
+
   const deployContract = async () => {
     if (contractAddress) return;
     const contract = userAccount.contract(backend);
     try {
       const test = await contract.p.Admin({
         deadline: 100,
-        price: stdlib.parseCurrency(1),
+        price: stdlib.parseCurrency(5),
         ready: () => {
           console.log("The contract is ready");
           throw 42;
@@ -67,9 +139,9 @@ export const WalletContextProvider = ({
         console.log(err);
       }
     }
+    setContractInstance(contract);
     const contractInfo = await contract.getInfo();
-    console.log(contractInfo);
-    setContractAddress(contractInfo);
+    setContractAddress(JSON.stringify(contractInfo, null, 2));
   };
 
   const connectToContract = async () => {
@@ -197,6 +269,11 @@ export const WalletContextProvider = ({
   return (
     <WalletContext.Provider
       value={{
+        usedQuery,
+        gameAccepted,
+        acceptGame,
+        readyToGo,
+        contractAddress,
         deployContract,
         userAccount,
         onDisconnect,
