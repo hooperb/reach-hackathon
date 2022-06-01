@@ -8,7 +8,7 @@ import { loadStdlib } from "@reach-sh/stdlib";
 import { ALGO_WalletConnect as WalletConnect_ALGO } from "@reach-sh/stdlib";
 
 // the contract
-import * as backend from "../build/index.main.mjs";
+import * as backend from "../contracts/index.main.mjs";
 
 const stdlib = loadStdlib("ALGO");
 stdlib.setWalletFallback(
