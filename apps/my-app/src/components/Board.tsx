@@ -10,7 +10,7 @@ const Board = () => {
   const [gameSelected, setGameSelected] = useState(false);
   const [winner, setWinner] = useState("");
 
-  const { walletState, connectToContract, contractBoard } =
+  const { walletState, connectToContract, contractBoard, deployContract } =
     useContext(WalletContext);
 
   // called when a gamemode is selected
@@ -22,6 +22,10 @@ const Board = () => {
     }
     setGameSelected(true);
     //
+  };
+
+  const deployContractInstance = async () => {
+    deployContract();
   };
 
   const makeMove = (slatID: number) => {
@@ -73,7 +77,12 @@ const Board = () => {
       )}
       <div>
         {walletState.connected ? (
-          <button onClick={() => startGame()}>Start Game!</button>
+          <>
+            <button onClick={() => deployContractInstance()}>
+              Deploy Contract!
+            </button>
+            <button onClick={() => startGame()}>Start Game!</button>
+          </>
         ) : (
           <p>Connect your wallet to get started!</p>
         )}

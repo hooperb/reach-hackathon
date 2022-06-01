@@ -26,6 +26,7 @@ export interface IWarningContext {
   connectToContract: () => void;
   contractBoard?: Array<Array<string>>;
   setContractBoard: (cBoard: Array<Array<string>>) => void;
+  deployContract: () => Promise<void>;
 }
 
 export const WalletContext = createContext({} as IWarningContext);
@@ -46,6 +47,29 @@ export const WalletContextProvider = ({
     if (!userAccount) return;
     const contract = userAccount.contract(backend);
     await contract.safeApis.BluePlayer.makeMove(x, y);
+  };
+
+  const deployContract = async () => {
+    if (contractAddress) return;
+    const contract = userAccount.contract(backend);
+    try {
+      const test = await contract.p.Admin({
+        deadline: 100,
+        price: stdlib.parseCurrency(1),
+        ready: () => {
+          console.log("The contract is ready");
+          throw 42;
+        },
+      });
+      console.log(test);
+    } catch (err) {
+      if (err !== 42) {
+        console.log(err);
+      }
+    }
+    const contractInfo = await contract.getInfo();
+    console.log(contractInfo);
+    setContractAddress(contractInfo);
   };
 
   const connectToContract = async () => {
@@ -74,26 +98,14 @@ export const WalletContextProvider = ({
       console.log("Contract string:");
       console.log(JSON.stringify(contractInfo, null, 2));
     }
-    // const redContract = await userAccount.contract(backend, contractInfo);
-    // console.log(redContract);
-    // const testRedCommit = await await contract.safeApis.BluePlayer.acceptGame();
-    // setContractAddress(await contract.getInfo()._hex);
-
     const existingContract = JSON.parse(`{
       "type": "BigNumber",
       "hex": "0x058b0b17"
     }`);
 
     const redContract = await userAccount.contract(backend, existingContract);
-    console.log(redContract);
-
-    // const testRedCommit = await redContract.safeApis.RedPlayer.acceptGame();
     const board = await redContract.views.Reader.getBoard();
-
-    console.log(board[1]);
     setContractBoard(board[1]);
-
-    // console.log(testRedCommit);
   };
 
   const connectWallet = async () => {
@@ -103,16 +115,11 @@ export const WalletContextProvider = ({
       bridge,
       qrcodeModal: QRCodeModal,
     });
-    console.log(instance);
-    console.log("here 1");
     const session = await instance.connect();
-    console.log("testing");
     const acc = await stdlib.connectAccount({ addr: session.accounts[0] });
-    console.log("here 2");
     setUserAccount(acc);
     setWalletState({ ...walletState, connector: instance });
     instance.on("session_update", async (error, payload) => {
-      console.log(`connector.on("session_update")`);
       if (error) {
         throw error;
       }
@@ -121,8 +128,6 @@ export const WalletContextProvider = ({
     });
 
     instance.on("connect", (error, payload) => {
-      console.log(`connector.on("connect")`);
-
       if (error) {
         throw error;
       }
@@ -130,7 +135,6 @@ export const WalletContextProvider = ({
     });
 
     instance.on("disconnect", (error, payload) => {
-      console.log(`connector.on("disconnect")`);
       if (error) {
         throw error;
       }
@@ -148,7 +152,6 @@ export const WalletContextProvider = ({
     }
     walletState.connector = instance;
     setWalletState(walletState);
-    console.log("updated state");
   };
 
   const onConnect = async (payload: IInternalEvent) => {
@@ -194,6 +197,7 @@ export const WalletContextProvider = ({
   return (
     <WalletContext.Provider
       value={{
+        deployContract,
         userAccount,
         onDisconnect,
         connectWallet,

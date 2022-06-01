@@ -27,10 +27,10 @@ const WalletConnection = () => {
   ) : (
     <div>
       {walletState.connected ? (
-        <>
-          Address: {walletState.address}
+        <div className="walletDetails">
+          <p>Address: {walletState.address}</p>
           <button onClick={() => disconnect()}>Disconnect Wallet</button>
-        </>
+        </div>
       ) : (
         <button onClick={() => connect()}>Connect Wallet</button>
       )}
