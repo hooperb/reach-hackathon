@@ -98,12 +98,17 @@ export const WalletContextProvider = ({
 
   const connectWallet = async () => {
     const bridge = "https://bridge.walletconnect.org";
+    console.log("gere");
     const instance = new WalletConnect({
       bridge,
       qrcodeModal: QRCodeModal,
     });
+    console.log(instance);
+    console.log("here 1");
     const session = await instance.connect();
+    console.log("testing");
     const acc = await stdlib.connectAccount({ addr: session.accounts[0] });
+    console.log("here 2");
     setUserAccount(acc);
     setWalletState({ ...walletState, connector: instance });
     instance.on("session_update", async (error, payload) => {
@@ -145,6 +150,7 @@ export const WalletContextProvider = ({
     setWalletState(walletState);
     console.log("updated state");
   };
+
   const onConnect = async (payload: IInternalEvent) => {
     const { accounts } = payload.params[0];
     const address = accounts[0];
